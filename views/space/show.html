@@ -1,0 +1,72 @@
+{% extends 'layouts/main.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>{{ space.name }}</h1>
+            <p>{{ space.description }}</p>
+            <p><strong>Локация:</strong> {{ space.location }}</p>
+            <p><strong>Цена:</strong> {{ space.price }} ₽/час</p>
+            <p><strong>Статус:</strong>
+                {% if space.availability %}
+                <span class="badge bg-success">Доступно</span>
+                {% else %}
+                <span class="badge bg-danger">Недоступно</span>
+                {% endif %}
+            </p>
+
+            {% if space.image %}
+            <img src="/assets/images/{{ space.image }}" class="img-fluid rounded mb-4" alt="{{ space.name }}">
+            {% endif %}
+
+            <a href="/spaces/{{ space.id }}/book" class="btn btn-primary">Забронировать</a>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Отзывы</h5>
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ review.username }}</strong>
+                            <div>
+                                {% for i in 1..5 %}
+                                {% if i <= review.rating %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                                {% else %}
+                                <i class="bi bi-star text-warning"></i>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p>{{ review.comment }}</p>
+                        <small class="text-muted">{{ review.created_at }}</small>
+
+                        {% if session.user_id == review.user_id or session.user_role == 'admin' %}
+                        <form action="/reviews/{{ review.id }}/delete" method="post" class="mt-2">
+                            <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    {% endfor %}
+                    {% else %}
+                    <p>Пока нет отзывов. Будьте первым!</p>
+                    {% endif %}
+
+                    {% if session.user_id %}
+                    <a href="/spaces/{{ space.id }}/review" class="btn btn-success mt-3">Добавить отзыв</a>
+                    {% else %}
+                    <p class="mt-3">Войдите, чтобы оставить отзыв</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'layouts/main.html' %}
+
+{% block content %}
+<div class="container my-5">
+  <h1>Личный кабинет</h1>
+
+  <div class="row mt-4">
+    <div class="col-md-3">
+      <div class="list-group">
+        <a href="/dashboard" class="list-group-item list-group-item-action active">Профиль</a>
+        <a href="/bookings" class="list-group-item list-group-item-action">Мои бронирования</a>
+        <a href="/reviews" class="list-group-item list-group-item-action">Мои отзывы</a>
+        <a href="/logout" class="list-group-item list-group-item-action">Выйти</a>
+      </div>
+    </div>
+
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-body">
+          <h3 class="card-title">Личная информация</h3>
+
+          <form id="profile-form">
+            <div class="mb-3">
+              <label for="name" class="form-label">Имя</label>
+              <input type="text" class="form-control" id="name" value="{{ user.name }}" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" value="{{ user.email }}" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="phone" class="form-label">Телефон</label>
+              <input type="tel" class="form-control" id="phone" value="{{ user.phone }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-body">
+          <h3 class="card-title">Безопасность</h3>
+
+          <form id="password-form">
+            <div class="mb-3">
+              <label for="current-password" class="form-label">Текущий пароль</label>
+              <input type="password" class="form-control" id="current-password" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="new-password" class="form-label">Новый пароль</label>
+              <input type="password" class="form-control" id="new-password" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="confirm-password" class="form-label">Подтвердите пароль</label>
+              <input type="password" class="form-control" id="confirm-password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Изменить пароль</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Обработка форм
+  document.getElementById('profile-form').addEventListener('submit', updateProfile);
+  document.getElementById('password-form').addEventListener('submit', changePassword);
+
+  function updateProfile(e) {
+    e.preventDefault();
+    // Реализация обновления профиля
+  }
+
+  function changePassword(e) {
+    e.preventDefault();
+    // Реализация смены пароля
+  }
+</script>
+{% endblock %}
