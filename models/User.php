@@ -1,26 +1,25 @@
 <?php
-
 namespace app\models;
 
-use app\core\Model;
+class User {
+    private ?int $id = null;
+    private string $username;
+    private string $email;
+    private string $password;
+    private string $role;
+    private ?string $token = null;
 
-class User extends Model
-{
-    public ?int $id = null;
-    public string $username = '';
-    public string $password = '';
-    public string $email = '';
-    public string $role = 'user';
-    public ?string $token = null;
-    public string $created_at = '';
-    public string $updated_at = '';
+    public function getId(): ?int { return $this->id; }
+    public function getUsername(): string { return $this->username; }
+    public function getEmail(): string { return $this->email; }
+    public function getPassword(): string { return $this->password; }
+    public function getRole(): string { return $this->role; }
+    public function getToken(): ?string { return $this->token; }
 
-    public function rules(): array
-    {
-        return [
-            'username' => [self::RULE_REQUIRED, [self::RULE_MIN, 'min' => 3]],
-            'email' => [self::RULE_REQUIRED, self::RULE_EMAIL],
-            'password' => [self::RULE_REQUIRED, [self::RULE_MIN, 'min' => 6]]
-        ];
-    }
+    public function setId(int $id): void { $this->id = $id; }
+    public function setUsername(string $username): void { $this->username = $username; }
+    public function setEmail(string $email): void { $this->email = $email; }
+    public function setPassword(string $password): void { $this->password = $password; }
+    public function setRole(string $role): void { $this->role = $role; }
+    public function setToken(?string $token): void { $this->token = $token; }
 }

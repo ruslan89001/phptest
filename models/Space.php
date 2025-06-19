@@ -1,45 +1,28 @@
 <?php
-
 namespace app\models;
 
-use app\core\Model;
+class Space {
+    private ?int $id = null;
+    private string $name;
+    private string $description;
+    private float $price;
+    private bool $availability;
+    private string $location;
+    private ?string $image = null;
 
-class Space extends Model
-{
-    public ?int $id = null;
-    public string $name = '';
-    public string $description = '';
-    public float $price = 0.0;
-    public bool $availability = true;
-    public string $location = '';
-    public ?string $image = null;
-    public string $created_at = '';
-    public string $updated_at = '';
+    public function getId(): ?int { return $this->id; }
+    public function getName(): string { return $this->name; }
+    public function getDescription(): string { return $this->description; }
+    public function getPrice(): float { return $this->price; }
+    public function isAvailable(): bool { return $this->availability; }
+    public function getLocation(): string { return $this->location; }
+    public function getImage(): ?string { return $this->image; }
 
-    public function rules(): array
-    {
-        return [
-            'name' => [self::RULE_REQUIRED, [self::RULE_MIN, 'min' => 3]],
-            'description' => [self::RULE_REQUIRED],
-            'price' => [self::RULE_REQUIRED, self::RULE_NUMBER],
-            'location' => [self::RULE_REQUIRED]
-        ];
-    }
-
-    public function attributes(): array
-    {
-        return ['name', 'description', 'price', 'availability', 'location', 'image'];
-    }
-
-    public function getFormattedPrice(): string
-    {
-        return number_format($this->price, 2) . ' ₽/час';
-    }
-
-    public function getStatusBadge(): string
-    {
-        return $this->availability
-            ? '<span class="badge bg-success">Доступно</span>'
-            : '<span class="badge bg-danger">Недоступно</span>';
-    }
+    public function setId(int $id): void { $this->id = $id; }
+    public function setName(string $name): void { $this->name = $name; }
+    public function setDescription(string $description): void { $this->description = $description; }
+    public function setPrice(float $price): void { $this->price = $price; }
+    public function setAvailability(bool $availability): void { $this->availability = $availability; }
+    public function setLocation(string $location): void { $this->location = $location; }
+    public function setImage(?string $image): void { $this->image = $image; }
 }

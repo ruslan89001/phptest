@@ -1,102 +1,53 @@
 <?php
-
 namespace app\mappers;
 
-use app\core\Database;
+use app\core\BaseMapper;
 use app\models\Booking;
 use PDO;
 
-class BookingMapper
-{
-    private PDO $pdo;
-
-    public function __construct()
-    {
-        $this->pdo = Database::getInstance()->getConnection();
+class BookingMapper extends BaseMapper {
+    protected function getTableName(): string {
+        return 'bookings';
     }
 
-    public function findByUser(int $userId): array
-    {
-        $stmt = $this->pdo->prepare("
-            SELECT b.*, s.name AS space_name 
-            FROM bookings b
-            JOIN spaces s ON b.space_id = s.id
-            WHERE b.user_id = :user_id
-            ORDER BY b.start_time DESC
-        ");
-        $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    protected function mapToEntity(array $data): Booking {
+        $booking = new Booking();
+        $booking->setId($data['id']);
+        $booking->setUserId($data['user_id']);
+        $booking->setSpaceId($data['space_id']);
+        $booking->setStartTime(new \DateTime($data['start_time']));
+        $booking->setEndTime(new \DateTime($data['end_time']));
+        $booking->setStatus($data['status']);
+        return $booking;
     }
 
-    public function save(Booking $booking): bool
-    {
-        if ($booking->id) {
-            return $this->update($booking);
-        }
-        return $this->insert($booking);
+    public function findByUser(int $userId): array {
+        $sql = "SELECT b.*, s.name as space_name FROM {$this->getTableName()} b
+                JOIN spaces s ON b.space_id = s.id
+                WHERE b.user_id = :user_id";
+        $stmt = $this->db->query($sql, ['user_id' => $userId]);
+        return array_map([$this, 'mapToEntity'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
-    private function insert(Booking $booking): bool
-    {
-        $sql = "INSERT INTO bookings (user_id, space_id, start_time, end_time, status) 
+    public function save(Booking $booking): int {
+        $sql = "INSERT INTO {$this->getTableName()} 
+                (user_id, space_id, start_time, end_time, status) 
                 VALUES (:user_id, :space_id, :start_time, :end_time, :status)";
-
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            'user_id' => $booking->user_id,
-            'space_id' => $booking->space_id,
-            'start_time' => $booking->start_time,
-            'end_time' => $booking->end_time,
-            'status' => $booking->status
+        return $this->executeInsert($sql, [
+            'user_id' => $booking->getUserId(),
+            'space_id' => $booking->getSpaceId(),
+            'start_time' => $booking->getStartTime()->format('Y-m-d H:i:s'),
+            'end_time' => $booking->getEndTime()->format('Y-m-d H:i:s'),
+            'status' => $booking->getStatus()
         ]);
     }
 
-    private function update(Booking $booking): bool
-    {
-        $sql = "UPDATE bookings SET 
-                start_time = :start_time, 
-                end_time = :end_time, 
-                status = :status
-                WHERE id = :id";
-
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute([
-            'id' => $booking->id,
-            'start_time' => $booking->start_time,
-            'end_time' => $booking->end_time,
-            'status' => $booking->status
-        ]);
-    }
-
-    public function delete(int $id): bool
-    {
-        $stmt = $this->pdo->prepare("DELETE FROM bookings WHERE id = :id");
-        return $stmt->execute(['id' => $id]);
-    }
-
-    public function checkAvailability(int $spaceId, string $startTime, string $endTime): bool
-    {
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) 
-            FROM bookings 
-            WHERE space_id = :space_id 
-            AND NOT (
-                end_time <= :start_time OR 
-                start_time >= :end_time
-            )
-        ");
-
-        $stmt->execute([
-            'space_id' => $spaceId,
-            'start_time' => $startTime,
-            'end_time' => $endTime
-        ]);
-
-        return $stmt->fetchColumn() === 0;
-    }
-    public function getCount(): int
-    {
-        $stmt = $this->pdo->query("SELECT COUNT(*) FROM bookings");
-        return (int)$stmt->fetchColumn();
+    public function findAll(): array {
+        $sql = "SELECT b.*, s.name as space_name, u.username 
+            FROM {$this->getTableName()} b
+            JOIN spaces s ON b.space_id = s.id
+            JOIN users u ON b.user_id = u.id";
+        $stmt = $this->db->query($sql);
+        return array_map([$this, 'mapToEntity'], $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 }

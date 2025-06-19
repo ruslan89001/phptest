@@ -1,69 +1,50 @@
 <?php
-
 namespace app\controllers;
 
 use app\core\Controller;
-use app\core\Request;
-use app\core\Response;
-use app\mappers\UserMapper;
 use app\models\User;
+use app\services\AuthService;
 
-class AuthController extends Controller
-{
-    public function login(Request $request, Response $response)
-    {
-        if ($request->isPost()) {
-            $email = $request->get('email');
-            $password = $request->get('password');
+class AuthController extends Controller {
+    private AuthService $authService;
 
-            $userMapper = new UserMapper();
-            $user = $userMapper->findByEmail($email);
+    public function __construct() {
+        $this->authService = new AuthService();
+    }
 
-            if (!$user || !$userMapper->verifyPassword($user, $password)) {
-                $this->session->setFlash('error', 'Неверный email или пароль');
-                return $this->render('auth/login');
+    public function login() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $user = $this->authService->login($_POST['email'], $_POST['password']);
+            if ($user) {
+                $_SESSION['user'] = $user;
+                $this->redirect('/profile');
             }
-
-            $this->session->set('user_id', $user->id);
-            $this->session->set('user_role', $user->role);
-
-            if ($user->role === 'admin') {
-                $response->redirect('/admin/dashboard');
-            } else {
-                $response->redirect('/dashboard');
-            }
+            return $this->render('auth/login', ['error' => 'Invalid credentials']);
         }
-
         return $this->render('auth/login');
     }
 
-    public function register(Request $request, Response $response)
-    {
-        if ($request->isPost()) {
+    public function register() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = new User();
-            $user->loadData($request->getBody());
+            $user->setUsername($_POST['username']);
+            $user->setEmail($_POST['email']);
+            $user->setPassword(password_hash($_POST['password'], PASSWORD_DEFAULT));
+            $user->setRole('user');
 
-            $userMapper = new UserMapper();
-
-            if ($userMapper->findByEmail($user->email)) {
-                $this->session->setFlash('error', 'Пользователь с таким email уже существует');
-                return $this->render('auth/register', ['model' => $user]);
-            }
-
-            if ($userMapper->save($user)) {
-                $this->session->setFlash('success', 'Регистрация прошла успешно! Войдите в систему.');
-                $response->redirect('/login');
-            } else {
-                $this->session->setFlash('error', 'Ошибка при регистрации');
+            try {
+                $registeredUser = $this->authService->register($user);
+                $_SESSION['user'] = $registeredUser;
+                $this->redirect('/profile');
+            } catch (\RuntimeException $e) {
+                return $this->render('auth/register', ['error' => $e->getMessage()]);
             }
         }
-
-        return $this->render('auth/register', ['model' => new User()]);
+        return $this->render('auth/register');
     }
 
-    public function logout(Response $response)
-    {
-        $this->session->destroy();
-        $response->redirect('/');
+    public function logout() {
+        session_destroy();
+        $this->redirect('/');
     }
 }

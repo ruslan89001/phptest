@@ -135,9 +135,5 @@ class Template
         self::$cache_enabled = $cache_enabled;
     }
 
-    public static function setTemplatePath(string $string)
-    {
-    }
-
 
 }

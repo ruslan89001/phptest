@@ -1,58 +1,27 @@
 <?php
-
 namespace app\core;
 
-class Application
-{
+class Application {
     public static string $ROOT_DIR;
-    public static Application $app;
-
     public Router $router;
     public Request $request;
-    public Response $response;
-    public Session $session;
     public Database $db;
-    public array $config;
+    public static Application $app;
 
-    public function __construct(string $rootPath, array $config)
-    {
+    public function __construct($rootPath) {
         self::$ROOT_DIR = $rootPath;
         self::$app = $this;
-
-        $this->config = $config;
         $this->request = new Request();
-        $this->response = new Response();
-        $this->router = new Router($this->request, $this->response);
-        $this->session = new Session();
-
-        $this->db = Database::getInstance($config['db']);
-
-        if ($this->config['app']['env'] !== 'production') {
-            $this->db->applyMigrations();
-        }
-
-        Template::setCachePath($rootPath . '/cache/');
-        Template::setTemplatePath($rootPath . '/app/views/');
-        Template::setCacheEnabled($this->config['app']['env'] === 'production');
+        $this->router = new Router($this->request);
+        $this->db = Database::getInstance();
     }
 
-    public function run()
-    {
+    public function run() {
         try {
             echo $this->router->resolve();
         } catch (\Exception $e) {
-            $this->response->setStatusCode($e->getCode());
-            $this->render('error', [
-                'exception' => $e
-            ]);
+            http_response_code(404);
+            echo Template::View('404');
         }
-    }
-
-    public function render(string $view, array $params = [])
-    {
-        $params['session'] = $this->session;
-        $params['app'] = $this;
-
-        Template::View($view . '.html', $params);
     }
 }

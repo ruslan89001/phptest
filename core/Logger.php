@@ -1,31 +1,24 @@
 <?php
-
 namespace app\core;
 
+class Logger {
+    private static $logPath = PROJECT_ROOT . '/logs/app.log';
 
-use Psr\Log\AbstractLogger;
-use Psr\Log\LoggerInterface;
-
-class Logger extends AbstractLogger
-{
-    protected string $filename;
-
-    public function __construct(string $filename)
-    {
-        $this->filename = $filename;
-        $directory = dirname($filename);
-        if (file_exists($directory)) {
-            return;
-        }
-
-        $status = mkdir($directory, 0777, true);
-        if (!$status) {
-            throw new \RuntimeException();
-        }
+    public static function log(string $message, string $level = 'INFO') {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[$timestamp] [$level] $message" . PHP_EOL;
+        file_put_contents(self::$logPath, $logMessage, FILE_APPEND);
     }
 
-    public function log($level, $message, array $context = array())
-    {
-        file_put_contents($this->filename, date("H-m-s") . " [$level] $message");
+    public static function error(string $message) {
+        self::log($message, 'ERROR');
+    }
+
+    public static function info(string $message) {
+        self::log($message, 'INFO');
+    }
+
+    public static function debug(string $message) {
+        self::log($message, 'DEBUG');
     }
 }

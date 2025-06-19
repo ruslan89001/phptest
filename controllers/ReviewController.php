@@ -1,65 +1,42 @@
 <?php
-
 namespace app\controllers;
 
 use app\core\Controller;
-use app\core\Request;
-use app\core\Response;
-use app\mappers\ReviewMapper;
 use app\models\Review;
+use app\services\ReviewService;
+use app\services\SpaceService;
 
-class ReviewController extends Controller
-{
-    public function create(Request $request, Response $response, int $spaceId)
-    {
-        if (!$this->session->get('user_id')) {
-            $this->session->setFlash('error', 'Пожалуйста, войдите в систему');
-            $response->redirect('/login');
+class ReviewController extends Controller {
+    private ReviewService $reviewService;
+    private SpaceService $spaceService;
+
+    public function __construct() {
+        $this->reviewService = new ReviewService();
+        $this->spaceService = new SpaceService();
+    }
+
+    public function index() {
+        $spaces = $this->spaceService->getAvailableSpaces();
+        $reviews = [];
+        if (isset($_GET['space_id'])) {
+            $reviews = $this->reviewService->getSpaceReviews($_GET['space_id']);
         }
-
-        $review = new Review();
-        $review->user_id = $this->session->get('user_id');
-        $review->space_id = $spaceId;
-
-        if ($request->isPost()) {
-            $review->loadData($request->getBody());
-
-            $mapper = new ReviewMapper();
-            if ($mapper->save($review)) {
-                $this->session->setFlash('success', 'Отзыв добавлен');
-                $response->redirect("/spaces/$spaceId");
-            } else {
-                $this->session->setFlash('error', 'Ошибка при добавлении отзыва');
-            }
-        }
-
-        return $this->render('review/create', [
-            'model' => $review,
-            'spaceId' => $spaceId
+        return $this->render('reviews/index', [
+            'spaces' => $spaces,
+            'reviews' => $reviews
         ]);
     }
 
-    public function delete(Request $request, Response $response, int $id)
-    {
-        $mapper = new ReviewMapper();
-        $review = $mapper->findById($id);
+    public function create() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $review = new Review();
+            $review->setUserId($_SESSION['user']->getId());
+            $review->setSpaceId($_POST['space_id']);
+            $review->setRating($_POST['rating']);
+            $review->setComment($_POST['comment']);
 
-        if (!$review) {
-            $this->session->setFlash('error', 'Отзыв не найден');
-            $response->redirect('/dashboard');
+            $this->reviewService->createReview($review);
+            $this->redirect('/reviews');
         }
-
-        if ($review['user_id'] !== $this->session->get('user_id') && !$this->isAdmin()) {
-            $this->session->setFlash('error', 'У вас нет прав для удаления этого отзыва');
-            $response->redirect('/dashboard');
-        }
-
-        if ($mapper->delete($id)) {
-            $this->session->setFlash('success', 'Отзыв удален');
-        } else {
-            $this->session->setFlash('error', 'Ошибка при удалении отзыва');
-        }
-
-        $response->redirect('/dashboard');
     }
 }

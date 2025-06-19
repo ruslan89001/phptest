@@ -1,52 +1,45 @@
 <?php
-
 namespace app\core;
 
-class Router
-{
-    private array $routes = [];
+class Router {
+    protected array $routes = [];
+    public Request $request;
 
-    public function get(string $path, string $controller, string $action): void
-    {
-        $this->addRoute('GET', $path, $controller, $action);
+    public function __construct(Request $request) {
+        $this->request = $request;
     }
 
-    public function post(string $path, string $controller, string $action): void
-    {
-        $this->addRoute('POST', $path, $controller, $action);
+    public function get($path, $callback) {
+        $this->routes['get'][$path] = $callback;
     }
 
-    private function addRoute(string $method, string $path, string $controller, string $action): void
-    {
-        $this->routes[$method][$path] = [
-            'controller' => $controller,
-            'action' => $action
-        ];
+    public function post($path, $callback) {
+        $this->routes['post'][$path] = $callback;
     }
 
-    public function dispatch(string $uri, string $method): void
-    {
-        $uri = parse_url($uri, PHP_URL_PATH);
+    public function put($path, $callback) {
+        $this->routes['put'][$path] = $callback;
+    }
 
-        foreach ($this->routes[$method] as $routePath => $route) {
-            // Простое сравнение путей
-            if ($routePath === $uri) {
-                $controllerName = "app\\controllers\\" . $route['controller'];
-                $action = $route['action'];
+    public function delete($path, $callback) {
+        $this->routes['delete'][$path] = $callback;
+    }
 
-                if (class_exists($controllerName)) {
-                    $controller = new $controllerName();
-                    if (method_exists($controller, $action)) {
-                        $controller->$action();
-                        return;
-                    }
-                }
-                break;
-            }
+    public function resolve() {
+        $path = $this->request->getPath();
+        $method = $this->request->getMethod();
+        $callback = $this->routes[$method][$path] ?? false;
+
+        if ($callback === false) {
+            throw new \Exception("Route not found", 404);
         }
 
-        // 404 Not Found
-        http_response_code(404);
-        echo "Page not found";
+        if (is_array($callback)) {
+            $controller = new $callback[0]();
+            $action = $callback[1];
+            return call_user_func([$controller, $action], $this->request);
+        }
+
+        return call_user_func($callback, $this->request);
     }
 }

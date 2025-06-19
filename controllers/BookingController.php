@@ -1,89 +1,36 @@
 <?php
-
 namespace app\controllers;
 
 use app\core\Controller;
-use app\core\Request;
-use app\core\Response;
-use app\mappers\BookingMapper;
-use app\mappers\SpaceMapper;
 use app\models\Booking;
+use app\services\BookingService;
 
-class BookingController extends Controller
-{
-    public function create(Request $request, Response $response, int $spaceId)
-    {
-        $spaceMapper = new SpaceMapper();
-        $space = $spaceMapper->findById($spaceId);
+class BookingController extends Controller {
+    private BookingService $bookingService;
 
-        if (!$space) {
-            $this->session->setFlash('error', 'Пространство не найдено');
-            $response->redirect('/spaces');
+    public function __construct() {
+        $this->bookingService = new BookingService();
+    }
+
+    public function index() {
+        if (!isset($_SESSION['user'])) {
+            $this->redirect('/login');
         }
+        $bookings = $this->bookingService->getUserBookings($_SESSION['user']->getId());
+        return $this->render('bookings/index', ['bookings' => $bookings]);
+    }
 
-        if ($request->isPost()) {
+    public function create() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $booking = new Booking();
-            $booking->loadData($request->getBody());
-            $booking->user_id = $this->session->get('user_id');
-            $booking->space_id = $spaceId;
-            $booking->status = 'pending';
+            $booking->setUserId($_SESSION['user']->getId());
+            $booking->setSpaceId($_POST['space_id']);
+            $booking->setStartTime(new \DateTime($_POST['start_time']));
+            $booking->setEndTime(new \DateTime($_POST['end_time']));
+            $booking->setStatus('pending');
 
-            $bookingMapper = new BookingMapper();
-
-            // Проверка доступности времени
-            if (!$bookingMapper->checkAvailability($spaceId, $booking->start_time, $booking->end_time)) {
-                $this->session->setFlash('error', 'Выбранное время недоступно');
-                return $this->render('booking/create', [
-                    'space' => $space,
-                    'model' => $booking
-                ]);
-            }
-
-            if ($bookingMapper->save($booking)) {
-                $this->session->setFlash('success', 'Бронирование создано успешно!');
-                $response->redirect('/bookings');
-            } else {
-                $this->session->setFlash('error', 'Ошибка при создании бронирования');
-            }
+            $this->bookingService->createBooking($booking);
+            $this->redirect('/bookings');
         }
-
-        return $this->render('booking/create', [
-            'space' => $space,
-            'model' => new Booking()
-        ]);
-    }
-
-    public function index()
-    {
-        if (!$this->session->get('user_id')) {
-            $this->session->setFlash('error', 'Пожалуйста, войдите в систему');
-            return (new Response())->redirect('/login');
-        }
-
-        $bookingMapper = new BookingMapper();
-        $bookings = $bookingMapper->findByUser($this->session->get('user_id'));
-
-        return $this->render('booking/index', [
-            'bookings' => $bookings
-        ]);
-    }
-
-    public function cancel(Request $request, Response $response, int $id)
-    {
-        $bookingMapper = new BookingMapper();
-        $booking = $bookingMapper->findById($id);
-
-        if (!$booking || $booking['user_id'] !== $this->session->get('user_id')) {
-            $this->session->setFlash('error', 'Бронирование не найдено');
-            $response->redirect('/bookings');
-        }
-
-        if ($bookingMapper->delete($id)) {
-            $this->session->setFlash('success', 'Бронирование отменено');
-        } else {
-            $this->session->setFlash('error', 'Ошибка при отмене бронирования');
-        }
-
-        $response->redirect('/bookings');
     }
 }

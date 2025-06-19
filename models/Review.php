@@ -1,25 +1,28 @@
 <?php
-
 namespace app\models;
 
-use app\core\Model;
+class Review {
+    private ?int $id = null;
+    private int $userId;
+    private int $spaceId;
+    private int $rating;
+    private ?string $comment;
+    private \DateTime $createdAt;
+    private ?string $username = null;
 
-class Review extends Model
-{
-    public ?int $id = null;
-    public int $user_id;
-    public int $space_id;
-    public int $rating;
-    public string $comment = '';
-    public string $created_at = '';
+    public function getId(): ?int { return $this->id; }
+    public function getUserId(): int { return $this->userId; }
+    public function getSpaceId(): int { return $this->spaceId; }
+    public function getRating(): int { return $this->rating; }
+    public function getComment(): ?string { return $this->comment; }
+    public function getCreatedAt(): \DateTime { return $this->createdAt; }
+    public function getUsername(): ?string { return $this->username; }
 
-    public function rules(): array
-    {
-        return [
-            'user_id' => [self::RULE_REQUIRED],
-            'space_id' => [self::RULE_REQUIRED],
-            'rating' => [self::RULE_REQUIRED, [self::RULE_MIN, 'min' => 1], [self::RULE_MAX, 'max' => 5]],
-            'comment' => [self::RULE_REQUIRED, [self::RULE_MIN, 'min' => 10]]
-        ];
-    }
+    public function setId(int $id): void { $this->id = $id; }
+    public function setUserId(int $userId): void { $this->userId = $userId; }
+    public function setSpaceId(int $spaceId): void { $this->spaceId = $spaceId; }
+    public function setRating(int $rating): void { $this->rating = $rating; }
+    public function setComment(?string $comment): void { $this->comment = $comment; }
+    public function setCreatedAt(\DateTime $createdAt): void { $this->createdAt = $createdAt; }
+    public function setUsername(string $username): void { $this->username = $username; }
 }
