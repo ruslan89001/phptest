@@ -20,8 +20,22 @@ class Application {
         try {
             echo $this->router->resolve();
         } catch (\Exception $e) {
-            http_response_code(404);
-            echo Template::View('404');
+            Logger::error("Error: " . $e->getMessage());
+
+            try {
+                if ($e->getCode() === 404) {
+                    http_response_code(404);
+                    echo Template::view('404.php');
+                } else {
+                    http_response_code(500);
+                    echo Template::view('error.php', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode() ?: 500
+                    ]);
+                }
+            } catch (\Exception $templateError) {
+                die("Critical error: " . $templateError->getMessage());
+            }
         }
     }
 }

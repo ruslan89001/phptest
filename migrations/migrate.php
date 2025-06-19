@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__.'/vendor/autoload.php';
+require_once __DIR__.'/../vendor/autoload.php';
 define('PROJECT_ROOT', dirname(__DIR__));
 
 use app\core\Database;

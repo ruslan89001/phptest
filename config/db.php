@@ -7,7 +7,7 @@ class db {
             'host' => 'localhost',
             'dbname' => 'coworking',
             'user' => 'postgres',
-            'password' => '',
+            'password' => '12345678',
             'port' => '5432',
             'driver' => 'pgsql'
         ];

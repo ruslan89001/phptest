@@ -12,8 +12,10 @@ class MainController extends Controller {
     }
 
     public function home() {
-        $featuredSpaces = array_slice($this->spaceService->getAvailableSpaces(), 0, 3);
+        $featuredSpaces = $this->spaceService->getFeaturedSpaces();
         return $this->render('home', [
+            'title' => 'Главная страница',
+            'user' => $_SESSION['user'] ?? null,
             'featuredSpaces' => $featuredSpaces
         ]);
     }

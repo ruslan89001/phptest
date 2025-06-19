@@ -1,139 +1,124 @@
 <?php
-
 namespace app\core;
 
-class Template
-{
+class Template {
+    private static array $blocks = [];
+    private static string $cachePath = PROJECT_ROOT . '/cache/';
+    private static string $templatePath = PROJECT_ROOT . '/views/';
+    private static bool $cacheEnabled = false;
 
-    private static array $blocks=[];
-    private static string $cache_path = PROJECT_ROOT . "/cache/";
-    private static string $template_path = PROJECT_ROOT . "/views/";
-    private static bool $cache_enabled = false;
-
-    static function View($file, $data = []): void
-    {
-        $cached_file = self::Cache($file);
-        extract($data);
-        require $cached_file;
+    public static function view(string $view, array $data = []): string {
+        $cachedFile = self::cache($view);
+        extract($data, EXTR_SKIP);
+        ob_start();
+        require $cachedFile;
+        return ob_get_clean();
     }
 
-
-    private static function CompilePHP(string $code): string
-    {
-        return preg_replace('~\{%\s*(.+?)\s*%}~is', '<?php $1 ?>', $code);
-    }
-
-    private static function CompileEchos(string $code): string
-    {
-        return preg_replace('~\{{\s*(.+?)\s*\}}~is', '<?php echo $1 ?>', $code);
-    }
-
-    private static function CompileEscapedEchos(string $code): string
-    {
-        return preg_replace('~\{{{\s*(.+?)\s*\}}}~is', '<?php echo htmlentities($1, ENT_QUOTES, \'UTF-8\') ?>',
-            $code);
-    }
-
-    private static function CompileBlock(string $code): string
-    {
-        {
-
-            preg_match_all('/{% ?block ?(.*?) ?%}(.*?){% ?endblock ?%}/is', $code, $matches, PREG_SET_ORDER);
-            foreach ($matches as $value) {
-                if (!array_key_exists($value[1], self::$blocks)) {
-                    self::$blocks[$value[1]] = '';
-                }
-                if (!str_contains($value[2], '@parent')) {
-                    self::$blocks[$value[1]] = $value[2];
-                } else {
-                    self::$blocks[$value[1]] = str_replace('@parent', self::$blocks[$value[1]], $value[2]);
-                }
-                $code = str_replace($value[0], '', $code);
-            }
-            return $code;
+    private static function cache(string $view): string {
+        if (!file_exists(self::$cachePath)) {
+            mkdir(self::$cachePath, 0744, true);
         }
-    }
 
-    private static function CompileYield($code)
-    {
-        foreach (self::$blocks as $block => $value) {
-            $code = preg_replace('/{% ?yield ?' . $block . ' ?%}/', $value, $code);
+        $cachedFile = self::$cachePath . str_replace(['/', '.php'], ['_', ''], $view) . '.php';
+
+        if (!self::$cacheEnabled || !file_exists($cachedFile) ||
+            filemtime(self::$templatePath . $view) > filemtime($cachedFile)) {
+
+            $code = self::includeFiles($view);
+            $code = self::compileCode($code);
+            file_put_contents($cachedFile, '<?php class_exists(\'' . __CLASS__ . '\') or exit; ?>' . PHP_EOL . $code);
         }
-        preg_replace('/{% ?yield ?(.*?) ?%}/i', '', $code);
-        return $code;
+
+        return $cachedFile;
     }
 
-    private static function CompileCode(string $code): string
-    {
-        $code = self::CompileBlock($code);
-        $code = self::CompileYield($code);
-        $code = self::CompileEscapedEchos($code);
-        $code = self::CompileEchos($code);
-        $code = self::CompilePHP($code);
-        return $code;
-    }
+    private static function includeFiles(string $file): string {
+        $filePath = self::$templatePath . $file;
+        if (!file_exists($filePath)) {
+            throw new \RuntimeException("Template file not found: {$filePath}");
+        }
 
-    private static function IncludeFiles(string $file): string
-    {
-        $code = file_get_contents(self::$template_path.$file);
+        $code = file_get_contents($filePath);
         preg_match_all('/{% ?(extends|include) ?\'?(.*?)\'? ?%}/i', $code, $matches, PREG_SET_ORDER);
-        foreach ($matches as $value) {
-            $code = str_replace($value[0], self::IncludeFiles($value[2]), $code);
+
+        foreach ($matches as $match) {
+            $includedContent = self::includeFiles($match[2]);
+            $code = str_replace($match[0], $includedContent, $code);
         }
-        return preg_replace('/{% ?(extends|include) ?\'?(.*?)\'? ?%}/i', '', $code);
+
+        return $code;
     }
 
-    private static function Cache(string $file): string
-    {
-        if (!file_exists(self::$cache_path)) {
-            mkdir(self::$cache_path, 0744);
+    private static function compileCode(string $code): string {
+        $code = self::compileBlocks($code);
+        $code = self::compileYields($code);
+        $code = self::compileEscapedEchos($code);
+        $code = self::compileEchos($code);
+        return self::compilePHP($code);
+    }
+
+    private static function compilePHP(string $code): string {
+        $code = preg_replace('/\{% if (.*?) %}/', '<?php if ($1): ?>', $code);
+        $code = preg_replace('/\{% else %}/', '<?php else: ?>', $code);
+        $code = preg_replace('/\{% endif %}/', '<?php endif; ?>', $code);
+
+        $code = preg_replace('~\{%\s*(.+?)\s*%}~is', '<?php $1 ?>', $code);
+        return $code;
+    }
+    private static function compileEchos(string $code): string {
+        return preg_replace_callback(
+            '~\{{\s*(.+?)\s*}}~is',
+            function ($matches) {
+                if (preg_match('/^\\$[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $matches[1])) {
+                    return '<?php echo htmlspecialchars('.$matches[1].', ENT_QUOTES) ?>';
+                }
+                return '<?php echo htmlspecialchars('.$matches[1].', ENT_QUOTES) ?>';
+            },
+            $code
+        );
+    }
+
+    private static function compileEscapedEchos(string $code): string {
+        return preg_replace('~\{{{\s*(.+?)\s*}}}~is', '<?php echo $1 ?>', $code);
+    }
+
+    private static function compileBlocks(string $code): string {
+        preg_match_all('/{% ?block ?(.*?) ?%}(.*?){% ?endblock ?%}/is', $code, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $blockName = trim($match[1]);
+            $blockContent = $match[2];
+
+            if (!isset(self::$blocks[$blockName])) {
+                self::$blocks[$blockName] = '';
+            }
+
+            if (!str_contains($blockContent, '@parent')) {
+                self::$blocks[$blockName] = $blockContent;
+            } else {
+                self::$blocks[$blockName] = str_replace('@parent', self::$blocks[$blockName], $blockContent);
+            }
+
+            $code = str_replace($match[0], '', $code);
         }
-        $cached_file = self::$cache_path . str_replace(['/', '.html'], ['_', ''], $file) . '.php';
-        if (!self::$cache_enabled || !file_exists($cached_file) || filemtime($cached_file) < filemtime($file)) {
-            $code = self::IncludeFiles($file);
-            $code = self::CompileCode($code);
-            file_put_contents($cached_file, '<?php class_exists(\'' . __CLASS__ . '\') or exit; ?>' . PHP_EOL . $code);
+
+        return $code;
+    }
+
+    private static function compileYields(string $code): string {
+        foreach (self::$blocks as $block => $content) {
+            $code = preg_replace('/{% ?yield ?' . preg_quote($block) . ' ?%}/', $content, $code);
         }
-        return $cached_file;
+        return preg_replace('/{% ?yield ?(.*?) ?%}/i', '', $code);
     }
 
-    public static function ClearCache():void {
-        foreach (glob(self::$cache_path.'*') as $file) {
-            unlink($file);
-        }
+    public static function clearCache(): void {
+        array_map('unlink', glob(self::$cachePath . '*'));
     }
 
-    /**
-     * @return string
-     */
-    public static function getCachePath(): string
-    {
-        return self::$cache_path;
+    public static function setCacheEnabled(bool $enabled): void {
+        self::$cacheEnabled = $enabled;
     }
-
-    /**
-     * @param string $cache_path
-     */
-    public static function setCachePath(string $cache_path): void
-    {
-        self::$cache_path = $cache_path;
-    }
-
-    /**
-     * @return bool
-     */
-    public static function isCacheEnabled(): bool
-    {
-        return self::$cache_enabled;
-    }
-
-    /**
-     * @param bool $cache_enabled
-     */
-    public static function setCacheEnabled(bool $cache_enabled): void
-    {
-        self::$cache_enabled = $cache_enabled;
-    }
-
 
 }

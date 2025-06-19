@@ -43,4 +43,13 @@ class Request {
 
         return $body;
     }
+    private array $params = [];
+
+    public function setParams(array $params): void {
+        $this->params = $params;
+    }
+
+    public function getParam(int $index) {
+        return $this->params[$index] ?? null;
+    }
 }

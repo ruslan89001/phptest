@@ -1,25 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>{% yield title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($title ?? 'Coworking Booking') ?></title>
     <link rel="stylesheet" href="/views/assets/css/styles.css">
 </head>
 <body>
 <header>
-    <h1>{% yield header %}</h1>
     <nav>
         <ul>
-            {% yield navigation %}
+            <li><a href="/">Главная</a></li>
+            <?php if (isset($user)): ?>
+                <li><a href="/logout">Выход</a></li>
+            <?php else: ?>
+                <li><a href="/login">Вход</a></li>
+                <li><a href="/register">Регистрация</a></li>
+            <?php endif; ?>
         </ul>
     </nav>
 </header>
+
 <main>
-    {% yield content %}
+    <?= $content ?? '' ?>
 </main>
+
 <footer>
-    <p>&copy; 2025 Coworking Booking</p>
+    <p>&copy; <?= date('Y') ?> Coworking Booking</p>
 </footer>
-<script src="/views/assets/js/main.js"></script>
 </body>
 </html>

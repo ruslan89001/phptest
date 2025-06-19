@@ -10,7 +10,8 @@
   ],
   "autoload": {
     "psr-4": {
-      "app\\": "./"
+      "app\\": "",
+      "migrations\\": "migrations/"
     }
   },
   "minimum-stability": "dev",
